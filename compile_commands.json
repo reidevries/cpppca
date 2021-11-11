@@ -11,5 +11,18 @@
     "directory": "/home/raeaw/Development/cpppca",
     "file": "/home/raeaw/Development/cpppca/main.cpp",
     "output": "/home/raeaw/Development/cpppca/cpppca"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-I/usr/include/eigen3",
+      "-o",
+      "cpppca",
+      "numbers.hpp"
+    ],
+    "directory": "/home/raeaw/Development/cpppca",
+    "file": "/home/raeaw/Development/cpppca/numbers.hpp",
+    "output": "/home/raeaw/Development/cpppca/cpppca"
   }
 ]

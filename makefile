@@ -8,6 +8,6 @@ CC=g++
 EIGENDIR=/usr/include/eigen3
 
 all:
-	$(CC) -I$(EIGENDIR) main.cpp -o cpppca
+	$(CC) -I$(EIGENDIR) main.cpp numbers.hpp -o cpppca
 
 # end

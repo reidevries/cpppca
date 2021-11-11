@@ -1,7 +1,21 @@
 #include <iostream>
 #include <Eigen/Dense>
+#include "numbers.hpp"
 
 using Eigen::MatrixXd;
+using Eigen::Matrix;
+
+template<typename Scalar, u64 rows, u64 cols>
+auto mean_cols( Matrix<Scalar, rows, cols> x ) -> Matrix<Scalar, 1, cols>
+{
+
+}
+
+template<typename Scalar, u64 rows, u64 cols>
+auto covariance( Matrix<Scalar, rows, cols> x ) -> Matrix<Scalar, rows, cols>
+{
+
+}
 
 int main()
 {
