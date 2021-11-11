@@ -5,24 +5,26 @@
 using Eigen::MatrixXd;
 using Eigen::Matrix;
 
-template<typename Scalar, u64 rows, u64 cols>
-auto mean_cols( Matrix<Scalar, rows, cols> x ) -> Matrix<Scalar, 1, cols>
-{
-
-}
+#define SCALAR_TYPE i32
 
 template<typename Scalar, u64 rows, u64 cols>
-auto covariance( Matrix<Scalar, rows, cols> x ) -> Matrix<Scalar, rows, cols>
+auto covariance( Matrix<Scalar, rows, cols> X ) -> Matrix<Scalar, cols, cols>
 {
-
+	auto m = X.colwise().mean();
+	auto M = Matrix<Scalar, rows, 1>::Ones() * m;
+	auto X_centered = X-M;
+	return X_centered.transpose() * X_centered;
 }
 
 int main()
 {
-  MatrixXd m(2,2);
-  m(0,0) = 3;
-  m(1,0) = 2.5;
-  m(0,1) = -1;
-  m(1,1) = m(1,0) + m(0,1);
-  std::cout << m << std::endl;
+	auto b = Matrix<SCALAR_TYPE, 5, 4>{
+		{2,3,4,5},
+		{3,5,6,7},
+		{6,5,3,2},
+		{3,2,1,7},
+		{5,4,3,6}
+	};
+	auto out = covariance<SCALAR_TYPE,5,4>(b);
+	std::cout << out << std::endl;
 }
