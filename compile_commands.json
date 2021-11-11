@@ -1,0 +1,15 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-I/usr/include/eigen3",
+      "-o",
+      "cpppca",
+      "main.cpp"
+    ],
+    "directory": "/home/raeaw/Development/cpppca",
+    "file": "/home/raeaw/Development/cpppca/main.cpp",
+    "output": "/home/raeaw/Development/cpppca/cpppca"
+  }
+]
