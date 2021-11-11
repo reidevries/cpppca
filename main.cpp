@@ -15,23 +15,30 @@ auto covariance( Matrix<Scalar, rows, cols> X ) -> Matrix<Scalar, cols, cols>
 	return X_centered.transpose() * X_centered;
 }
 
-
-
 int main()
 {
-	auto b = Matrix<SCALAR_TYPE, 5, 4>{
-		{2,3,4,5},
-		{3,5,6,7},
-		{6,5,3,2},
-		{3,2,1,7},
-		{5,4,3,6}
+	static constexpr int ROWS = 5;
+	static constexpr int COLS = 6;
+	static constexpr int COLS_REDUCED = 6;
+	auto X = Matrix<SCALAR_TYPE, ROWS, COLS>{
+		{ 2, 7, 3,16, 4, 5},
+		{ 3, 5, 9, 6,13, 7},
+		{ 6,12, 5, 3,22, 2},
+		{11, 3, 2, 1, 7,11},
+		{ 5,23,10, 4, 3, 6}
 	};
-	auto out = covariance<SCALAR_TYPE,5,4>(b);
+	auto out = covariance<SCALAR_TYPE,ROWS,COLS>(X);
 	std::cout << out << std::endl;
-	SelfAdjointEigenSolver<Matrix<SCALAR_TYPE, 4, 4>> eigensolver(out);
+	auto eigensolver
+		= SelfAdjointEigenSolver<Matrix<SCALAR_TYPE,COLS,COLS>>(out);
 	if (eigensolver.info() != Success) abort();
 	std::cout << "The eigenvalues of A are:\n" << eigensolver.eigenvalues() << std::endl;
 	std::cout << "Here's a matrix whose columns are eigenvectors of A \n"
 			<< "corresponding to these eigenvalues:\n"
 			<< eigensolver.eigenvectors() << std::endl;
+	auto P = eigensolver.eigenvectors().block<COLS,COLS_REDUCED>(0,0);
+	auto Z = X*P;
+	auto X_hat = Z*P.adjoint();
+	std::cout << X_hat << std::endl;
+
 }
