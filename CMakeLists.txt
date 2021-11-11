@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.0)
+project( CPPPCA )
+find_package( OpenCV REQUIRED )
+find_package( Eigen3 3.4 REQUIRED NO_MODULE )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+add_executable( cpppca cpppca.cpp )
+target_link_libraries( cpppca Eigen3::Eigen )
+target_link_libraries( cpppca ${OpenCV_LIBS} )
