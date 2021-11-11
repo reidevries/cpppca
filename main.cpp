@@ -2,10 +2,9 @@
 #include <Eigen/Dense>
 #include "numbers.hpp"
 
-using Eigen::MatrixXd;
-using Eigen::Matrix;
+using namespace Eigen;
 
-#define SCALAR_TYPE i32
+#define SCALAR_TYPE f64
 
 template<typename Scalar, u64 rows, u64 cols>
 auto covariance( Matrix<Scalar, rows, cols> X ) -> Matrix<Scalar, cols, cols>
@@ -15,6 +14,8 @@ auto covariance( Matrix<Scalar, rows, cols> X ) -> Matrix<Scalar, cols, cols>
 	auto X_centered = X-M;
 	return X_centered.transpose() * X_centered;
 }
+
+
 
 int main()
 {
@@ -27,4 +28,10 @@ int main()
 	};
 	auto out = covariance<SCALAR_TYPE,5,4>(b);
 	std::cout << out << std::endl;
+	SelfAdjointEigenSolver<Matrix<SCALAR_TYPE, 4, 4>> eigensolver(out);
+	if (eigensolver.info() != Success) abort();
+	std::cout << "The eigenvalues of A are:\n" << eigensolver.eigenvalues() << std::endl;
+	std::cout << "Here's a matrix whose columns are eigenvectors of A \n"
+			<< "corresponding to these eigenvalues:\n"
+			<< eigensolver.eigenvectors() << std::endl;
 }
