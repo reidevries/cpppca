@@ -57,8 +57,10 @@ auto reshape_row_to_img(const cv::Mat& row, const u64 img_rows) -> cv::Mat
 	for (u8 i = 0; i < 3; ++i) {
 		input.row(i).reshape(0, img_rows).convertTo(channels[i], CV_32F);
 	}
+	cv::Mat merged;
+	cv::merge(channels, 3, merged);
 	cv::Mat output;
-	cv::merge(channels, 3, output);
+    cv::normalize(merged, output, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 	return output;
 }
 
@@ -66,6 +68,8 @@ class PCA {
 	cv::Mat means;
 	cv::Mat eigenvecs;
 public:
+	PCA() {}
+
 	PCA(const cv::Mat& data)
 	{
 		train(data);
@@ -76,14 +80,15 @@ public:
 		cv::PCACompute(data, means, eigenvecs, static_cast<int>(data.rows));
 	}
 
-	auto project(const cv::Mat& data_row) -> cv::Mat
+	auto project(const cv::Mat& data_row) const -> cv::Mat
 	{
 		cv::Mat output;
 		cv::PCAProject(data_row, means, eigenvecs, output);
 		return output;
 	}
 
-	auto project(const cv::Mat& data_row, int num_components) -> cv::Mat
+	auto project(const cv::Mat& data_row, const int num_components) const
+		-> cv::Mat
 	{
 		auto z = eigenvecs.rowRange(0, num_components);
 		cv::Mat output;
@@ -91,21 +96,44 @@ public:
 		return output;
 	}
 
-	auto reconstruct(const cv::Mat& input) -> cv::Mat
+	auto reconstruct(const cv::Mat& input) const -> cv::Mat
 	{
 		cv::Mat output;
 		cv::PCABackProject(input, means, eigenvecs, output);
 		return output;
 	}
 
-	auto reconstruct(const cv::Mat& input, int num_components) -> cv::Mat
+	auto reconstruct(const cv::Mat& input, const int num_components) const
+		-> cv::Mat
 	{
+
 		auto z = eigenvecs.rowRange(0, num_components);
 		cv::Mat output;
-		cv::PCAProject(input, means, z, output);
+		cv::PCABackProject(input, means, z, output);
 		return output;
 	}
+
+	auto get_component(const int index) -> cv::Mat
+	{
+		return eigenvecs.row(index);
+	}
 };
+
+
+struct params
+{
+    cv::Mat data;
+    int img_xsize;
+    PCA pca;
+    std::string window_name;
+};
+
+void trackbar_callback(int pos, void* ptr)
+{
+    struct params *p = (struct params *)ptr;
+	auto final_img = reshape_row_to_img(p->pca.get_component(pos), p->img_xsize);
+    cv::imshow(p->window_name, final_img);
+}
 
 int main()
 {
@@ -121,15 +149,23 @@ int main()
 	auto data = reshape_images_to_rows(images);
 	auto pca = PCA(data);
 
-	cv::Mat projection = pca.project(data.row(1));
-	cv::Mat reconstruction = pca.reconstruct(projection);
-	cv::Mat dest = reshape_row_to_img(reconstruction, images[0].rows);
-	cv::Mat final_img;
-    cv::normalize(dest, final_img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+	auto projection = pca.project(data.row(1), 4);
+	std::cout << "projection: " << projection.rows << "x" << projection.cols << std::endl;
+	auto reconstruction = pca.reconstruct(projection, 4);
+	std::cout << "reconstruction: " << reconstruction.rows << "x" << reconstruction.cols << std::endl;
+	auto final_img = reshape_row_to_img(pca.get_component(0), images[0].rows);
 
 	// init highgui window
 	auto window_name = "reconstruction";
     cv::namedWindow(window_name, cv::WINDOW_NORMAL);
+	// params struct to pass to the trackbar handler
+    params p;
+    p.data = data;
+    p.img_xsize = images[0].rows;
+    p.pca = pca;
+    p.window_name = window_name;
+    // create the tracbar
+    cv::createTrackbar("Retained Variance (%)", window_name, NULL, images.size()-1, trackbar_callback, (void*)&p);
     // display until user presses q
     cv::imshow(window_name, final_img);
     while(cv::waitKey() != 'q') {}
