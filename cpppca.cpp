@@ -62,6 +62,51 @@ auto reshape_row_to_img(const cv::Mat& row, const u64 img_rows) -> cv::Mat
 	return output;
 }
 
+class PCA {
+	cv::Mat means;
+	cv::Mat eigenvecs;
+public:
+	PCA(const cv::Mat& data)
+	{
+		train(data);
+	}
+
+	void train(const cv::Mat& data)
+	{
+		cv::PCACompute(data, means, eigenvecs, static_cast<int>(data.rows));
+	}
+
+	auto project(const cv::Mat& data_row) -> cv::Mat
+	{
+		cv::Mat output;
+		cv::PCAProject(data_row, means, eigenvecs, output);
+		return output;
+	}
+
+	auto project(const cv::Mat& data_row, int num_components) -> cv::Mat
+	{
+		auto z = eigenvecs.rowRange(0, num_components);
+		cv::Mat output;
+		cv::PCAProject(data_row, means, z, output);
+		return output;
+	}
+
+	auto reconstruct(const cv::Mat& input) -> cv::Mat
+	{
+		cv::Mat output;
+		cv::PCABackProject(input, means, eigenvecs, output);
+		return output;
+	}
+
+	auto reconstruct(const cv::Mat& input, int num_components) -> cv::Mat
+	{
+		auto z = eigenvecs.rowRange(0, num_components);
+		cv::Mat output;
+		cv::PCAProject(input, means, z, output);
+		return output;
+	}
+};
+
 int main()
 {
 	std::vector<cv::Mat> images;
@@ -74,14 +119,10 @@ int main()
 	}
 
 	auto data = reshape_images_to_rows(images);
-	cv::Mat means;
-	cv::Mat eigenvecs;
-	cv::PCACompute(data, means, eigenvecs, static_cast<int>(images.size()));
+	auto pca = PCA(data);
 
-	cv::Mat projection;
-    cv::PCAProject(data.row(1), means, eigenvecs, projection);
-	cv::Mat reconstruction;
-    cv::PCABackProject(projection, means, eigenvecs, reconstruction);
+	cv::Mat projection = pca.project(data.row(1));
+	cv::Mat reconstruction = pca.reconstruct(projection);
 	cv::Mat dest = reshape_row_to_img(reconstruction, images[0].rows);
 	cv::Mat final_img;
     cv::normalize(dest, final_img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
