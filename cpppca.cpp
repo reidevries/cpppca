@@ -20,19 +20,18 @@ void read_img_list(const std::string& filename, std::vector<cv::Mat>& images)
 
 auto reshape_img_to_row(const cv::Mat& img) -> cv::Mat
 {
+	// split individual channels from img
 	cv::Mat row_channels[3];
 	cv::split(img.clone(), row_channels);
+
+	// append each channel into the same grayscale Mat
+	// then put them all on the same row
 	auto output = cv::Mat();
 	output.push_back(row_channels[0]);
 	output.push_back(row_channels[1]);
 	output.push_back(row_channels[2]);
 	output = output.reshape(0,1);
 	return output;
-}
-
-auto reshape_row_to_img(const cv::Mat& row) -> cv::Mat
-{
-	return cv::Mat();
 }
 
 auto reshape_images_to_rows(const std::vector<cv::Mat> &images) -> cv::Mat
@@ -48,6 +47,19 @@ auto reshape_images_to_rows(const std::vector<cv::Mat> &images) -> cv::Mat
 		reshape_img_to_row(images[i]).convertTo(row_i, CV_32F);
 	}
 	return result;
+}
+
+auto reshape_row_to_img(const cv::Mat& row, const u64 img_rows) -> cv::Mat
+{
+	// split row up into three equal parts, and place them as rows of a matrix
+	auto input = row.reshape(0,3);
+	cv::Mat channels[3];
+	for (u8 i = 0; i < 3; ++i) {
+		input.row(i).reshape(0, img_rows).convertTo(channels[i], CV_32F);
+	}
+	cv::Mat output;
+	cv::merge(channels, 3, output);
+	return output;
 }
 
 int main()
@@ -66,9 +78,10 @@ int main()
 
     cv::Mat point = pca.project(data.row(0));
     cv::Mat reconstruction = pca.backProject(point);
-    reconstruction = reconstruction.reshape(0, images[0].rows*3);
+	cv::Mat dest = reshape_row_to_img(reconstruction, images[0].rows);
+	std::cout << dest.rows << "x" << dest.cols << std::endl;
 	cv::Mat final_img;
-    cv::normalize(reconstruction, final_img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    cv::normalize(dest, final_img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
 	// init highgui window
 	auto window_name = "reconstruction";
