@@ -67,6 +67,7 @@ auto reshape_row_to_img(const cv::Mat& row, const u64 img_rows) -> cv::Mat
 class PCA {
 	cv::Mat means;
 	cv::Mat eigenvecs;
+	cv::Mat eigenvals;
 public:
 	PCA() {}
 
@@ -77,7 +78,13 @@ public:
 
 	void train(const cv::Mat& data)
 	{
-		cv::PCACompute(data, means, eigenvecs, static_cast<int>(data.rows));
+		cv::PCACompute(
+			data,
+			means,
+			eigenvecs,
+			eigenvals,
+			static_cast<int>(data.rows)
+		);
 	}
 
 	auto project(const cv::Mat& data_row) const -> cv::Mat
@@ -117,6 +124,16 @@ public:
 	{
 		return eigenvecs.row(index);
 	}
+
+	auto get_component_range(const int start, const int end) -> cv::Mat
+	{
+		auto sum = cv::Mat::zeros(1, eigenvecs.cols, eigenvecs.type());
+		for (u64 i = start; i < end; ++i) {
+			auto component = eigenvecs.row(i)*eigenvals.at<float>(i);
+			sum = sum + component;
+		}
+		return sum;
+	}
 };
 
 
@@ -131,7 +148,10 @@ struct params
 void trackbar_callback(int pos, void* ptr)
 {
     struct params *p = (struct params *)ptr;
-	auto final_img = reshape_row_to_img(p->pca.get_component(pos), p->img_xsize);
+	auto final_img = reshape_row_to_img(
+		p->pca.get_component_range(0, pos),
+		p->img_xsize
+	);
     cv::imshow(p->window_name, final_img);
 }
 
@@ -150,9 +170,13 @@ int main()
 	auto pca = PCA(data);
 
 	auto projection = pca.project(data.row(1), 4);
-	std::cout << "projection: " << projection.rows << "x" << projection.cols << std::endl;
+	std::cout << "projection: "
+			  << projection.rows << "x"
+			  << projection.cols << std::endl;
 	auto reconstruction = pca.reconstruct(projection, 4);
-	std::cout << "reconstruction: " << reconstruction.rows << "x" << reconstruction.cols << std::endl;
+	std::cout << "reconstruction: "
+			  << reconstruction.rows << "x"
+			  << reconstruction.cols << std::endl;
 	auto final_img = reshape_row_to_img(pca.get_component(0), images[0].rows);
 
 	// init highgui window
@@ -165,7 +189,14 @@ int main()
     p.pca = pca;
     p.window_name = window_name;
     // create the tracbar
-    cv::createTrackbar("Retained Variance (%)", window_name, NULL, images.size()-1, trackbar_callback, (void*)&p);
+    cv::createTrackbar(
+		"Retained Variance (%)",
+		window_name,
+		NULL,
+		images.size()-1,
+		trackbar_callback,
+		(void*)&p
+	);
     // display until user presses q
     cv::imshow(window_name, final_img);
     while(cv::waitKey() != 'q') {}
