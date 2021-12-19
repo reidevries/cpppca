@@ -2,53 +2,50 @@
 #include <Eigen/Dense>
 #include "numbers.hpp"
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/core/eigen.hpp>
+#include <iostream>
 using namespace Eigen;
 
-#define SCALAR_TYPE f64
-
-template<typename Scalar, u64 rows, u64 cols>
-auto covariance( Matrix<Scalar, rows, cols> X ) -> Matrix<Scalar, cols, cols>
+auto covariance( MatrixXd X ) -> MatrixXd
 {
 	auto m = X.colwise().mean();
-	auto M = Matrix<Scalar, rows, 1>::Ones() * m;
+	auto M = MatrixXd::Ones(X.rows(), 1) * m;
 	auto X_centered = X-M;
 	return X_centered.transpose() * X_centered;
 }
 
-template<typename Scalar, u64 t_rows, u64 t_cols>
 class PrincipleComponentAnalysis
 {
-	Matrix<Scalar, t_rows, t_cols> X;
-	Matrix<Scalar, t_cols, t_cols> C;
-	SelfAdjointEigenSolver<Matrix<Scalar, t_cols, t_cols>> solver;
+	MatrixXd X;
+	MatrixXd C;
+	SelfAdjointEigenSolver<MatrixXd> solver;
 
 public:
-	PrincipleComponentAnalysis(Matrix<Scalar, t_rows, t_cols> _X)
+	PrincipleComponentAnalysis(MatrixXd _X)
 		: X(_X),
-		  C(covariance<Scalar, t_rows, t_cols>(_X)),
+		  C(covariance(_X)),
 		  solver(C)
 	{
 		if (solver.info() != Success) abort();
 	}
 
-	template<u64 k>
-	auto projection_matrix() -> Matrix<Scalar, t_cols, k>
+	auto projection_matrix(u64 k) -> MatrixXd
 	{
-		// wtf?? why do i have to write with  this weird syntax??
-		return solver.eigenvectors().template block<t_cols,k>(0,0);
+		return solver.eigenvectors().leftCols(k);
 	}
 
-	template<u64 k>
-	auto project() -> Matrix<Scalar, t_rows, k>
+	auto project(u64 k) -> MatrixXd
 	{
-		auto P = projection_matrix<k>();
+		auto P = projection_matrix(k);
 		return X * P;
 	}
 
-	template<u64 k>
-	auto reconstruct(Matrix<Scalar, t_rows, k> Z) -> Matrix<Scalar, t_rows, t_cols>
+	auto reconstruct(MatrixXd Z, u64 k) -> MatrixXd
 	{
-		auto P = projection_matrix<k>();
+		auto P = projection_matrix(k);
 		return Z * P.adjoint();
 	}
 };
@@ -58,17 +55,21 @@ int main()
 	static constexpr int ROWS = 5;
 	static constexpr int COLS = 6;
 	static constexpr int COLS_REDUCED = 6;
-	auto X = Matrix<SCALAR_TYPE, ROWS, COLS>{
-		{ 2, 7, 3,16, 4, 5},
-		{ 3, 5, 9, 6,13, 7},
-		{ 6,12, 5, 3,22, 2},
-		{11, 3, 2, 1, 7,11},
-		{ 5,23,10, 4, 3, 6}
-	};
 
-	auto pca = PrincipleComponentAnalysis<SCALAR_TYPE, ROWS, COLS>(X);
-	auto Z = pca.project<5>();
-	std::cout << Z << std::endl;
-	auto X_hat = pca.reconstruct<5>(Z);
-	std::cout << X_hat << std::endl;
+	auto image_path = cv::samples::findFile("starry_night.jpg");
+    auto img = cv::imread(image_path, cv::IMREAD_COLOR);
+	auto img_mat = MatrixXd();
+	cv::cv2eigen(img, img_mat);
+    if(img.empty())
+    {
+        std::cout << "Could not read the image: " << image_path << std::endl;
+        return 1;
+    }
+    cv::imshow("Display window", img);
+    int k = cv::waitKey(0); // Wait for a keystroke in the window
+    if(k == 's')
+    {
+        cv::imwrite("starry_night.png", img);
+    }
+    return 0;
 }
