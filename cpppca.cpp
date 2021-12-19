@@ -74,12 +74,15 @@ int main()
 	}
 
 	auto data = reshape_images_to_rows(images);
-	auto pca = cv::PCA(data, cv::Mat(), cv::PCA::DATA_AS_ROW, 1.0);
+	cv::Mat means;
+	cv::Mat eigenvecs;
+	cv::PCACompute(data, means, eigenvecs, static_cast<int>(images.size()));
 
-    cv::Mat point = pca.project(data.row(0));
-    cv::Mat reconstruction = pca.backProject(point);
+	cv::Mat projection;
+    cv::PCAProject(data.row(1), means, eigenvecs, projection);
+	cv::Mat reconstruction;
+    cv::PCABackProject(projection, means, eigenvecs, reconstruction);
 	cv::Mat dest = reshape_row_to_img(reconstruction, images[0].rows);
-	std::cout << dest.rows << "x" << dest.cols << std::endl;
 	cv::Mat final_img;
     cv::normalize(dest, final_img, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
